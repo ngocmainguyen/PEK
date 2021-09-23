@@ -22,6 +22,9 @@ tail = 0
 rb_selection = []
 bind_jnt = []
 con_jnt = []
+rb_chain = []
+sine_number = []
+
 
 class NM_Window:
 
@@ -156,8 +159,21 @@ Edge bounded   Static   New Hair Sys''')
         cmds.setParent (child3)
         self.ribbon_sine_deformer = cmds.button (l='''Sine Deformer Menu (HB = 2)
 In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
+        self.separate = cmds.separator (w=200, h=5)
+        cmds.rowColumnLayout (nc=2)
+        self.sine_amount = cmds.intFieldGrp (label='Sine Amount', cl2=["left", "left"],
+                                                     cw2=[70, 70], value1=4)
+        self.sine_amount_btn = cmds.button (l="OK", w=50, c=self.sine_info)
+        cmds.setParent (child3)
         self.connect_attributes_rb = cmds.button (l='Create master con and connect attr', w=200,
                                                   c=self.connect_ribbon_attributes)
+        self.to_do = cmds.text (l= '''Select SDK grp of RB con''', al="center", w=200, ww=1)    
+        cmds.rowColumnLayout (nc=3)
+        self.l_pect_sdk_oc_button = cmds.button (l="l_pect", w=66, c=self.l_pect_oc)
+        self.r_pect_sdk_oc_button = cmds.button (l="r_pect", w=66, c=self.r_pect_oc)
+        self.tail_sdk_oc_button = cmds.button (l="tail", w=66, c=self.tail_oc)
+        cmds.setParent (child3)
+        self.to_do = cmds.text (l= '''Turn on BS in def_RB''', al="center", w=200, ww=1)
         self.rb_clean = cmds.button (l='Clean Outliner', w=200, c=self.rb_clean)
         cmds.setParent (tabs)
 
@@ -427,8 +443,6 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         cmds.setAttr ('spine_CLT_OFFSET.visibility', 0)
         cmds.setAttr ('COG_CLTHandle.visibility', 0)
 
-       
-
     def create_jnt(self,*args):
         # Make joint out of selection
         sc = 0
@@ -542,36 +556,6 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
             count = i + 1
             cmds.rename ('{}_LOC_{}'.format (name, count), '{}_{}_LOC'.format (name, count))
 
-        # Store amount of chain for each fin. To easy access when building cluster
-        if name_num == 1:
-            total_spikes.append(amount)
-            total_name.append(name)
-            dorsal += amount
-        if name_num == 2:
-            total_spikes.append(amount)
-            total_name.append (name)
-            last_dorsalLG.append(amount * per_spikes_amount)
-            dorsal += amount
-        if name_num == 3:
-            total_spikes.append (amount)
-            total_spikes.append (amount)
-            total_name.append (name)
-            total_name.append ('R_pelvic')
-        if name_num == 4:
-            total_spikes.append (amount)
-            total_spikes.append (amount)
-            total_name.append (name)
-            total_name.append ('R_pelvicLG')
-            last_L_pelvicLG.append(amount * per_spikes_amount)
-            last_R_pelvicLG.append(amount * per_spikes_amount)
-        if name_num == 5:
-            total_spikes.append (amount)
-            total_name.append (name)
-        if name_num == 6:
-            total_spikes.append (amount)
-            total_name.append (name)
-            last_analLG.append(amount * per_spikes_amount)
-
     def parent_dynamic_fin_loc(self, *args):
         name = cmds.optionMenuGrp (self.name_menu, q=1, v=1)
         amount = cmds.intFieldGrp (self.spikes_amount, q=1, value1=1)
@@ -635,7 +619,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
             count = (i + 1) * per_spikes_amount
             cmds.ikHandle (n='{}_{}_HDL'.format (name, count),
                            sj='{}_{}_JNT'.format (name, count - (per_spikes_amount - 1)),
-                           ee='{}_{}_JNT'.format (name, count), sol='ikSplineSolver', ns= 4)
+                           ee='{}_{}_JNT'.format (name, count), sol='ikSplineSolver')
             cmds.select (cl=1)
             cmds.rename ('curve1', '{}_{}_DCRV'.format (name, count - (per_spikes_amount - 1)))
             cmds.rename ('effector1', '{}_{}_EFF'.format (name, count - (per_spikes_amount - 1)))
@@ -808,55 +792,27 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         # control and offset group
         for i in all_clusters:
             control_name = i.replace ("_CLTHandle", "_CON")
-            ctrl = cmds.circle (nr=(0, 0, 1), r=1, n=control_name)[0]
+            ctrl = cmds.circle (nr=(1, 0, 0), r=1, n=control_name)[0]
             sdk = cmds.group (ctrl, n=ctrl + '_SDK')
             open_close = cmds.group(ctrl, n=ctrl + '_OC')
             offset = cmds.group (sdk, n=ctrl + '_OFFSET')
             cmds.parentConstraint (i, offset, mo=0)
-            cmds.delete (cmds.parentConstraint (i, offset))
-            cmds.parent (i, ctrl)
+            cmds.delete (cmds.parentConstraint (i, offset))            
             dynamic_offset_groups.append(offset)
             dynamic_sdk_groups.append(sdk)
             dynamic_oc_groups.append(open_close)
 
-        con_list01 = cmds.listRelatives ('dorsal_*_CON', s=1)
-        for each in con_list01:
-            cmds.setAttr (each + '.lineWidth', 2)
-            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
-            cmds.setAttr (each + '.overrideColor', 18)
-
-        con_list02 = cmds.listRelatives ('dorsalLG_*_CON', s=1)
-        for each in con_list02:
-            cmds.setAttr (each + '.lineWidth', 2)
-            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
-            cmds.setAttr (each + '.overrideColor', 18)
-
-        con_list03 = cmds.listRelatives ('*pelvic_*_CON', s=1)
-        for each in con_list03:
-            cmds.setAttr (each + '.lineWidth', 2)
-            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
-            cmds.setAttr (each + '.overrideColor', 18)
-
-        con_list04 = cmds.listRelatives ('*pelvicLG_*_CON', s=1)
-        for each in con_list04:
-            cmds.setAttr (each + '.lineWidth', 2)
-            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
-            cmds.setAttr (each + '.overrideColor', 18)
-
-        con_list05 = cmds.listRelatives ('anal_*_CON', s=1)
-        for each in con_list05:
-            cmds.setAttr (each + '.lineWidth', 2)
-            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
-            cmds.setAttr (each + '.overrideColor', 18)
-
-        con_list06 = cmds.listRelatives ('analLG_*_CON', s=1)
-        for each in con_list06:
-            cmds.setAttr (each + '.lineWidth', 2)
-            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
-            cmds.setAttr (each + '.overrideColor', 18)
-
         # Reorient offset group for set driven keys
-        offset_groups = cmds.ls ('*_HCRV_*_CON_OFFSET')
+        dorsal_offset = cmds.ls ('dorsal_*_HCRV_*_CON_OFFSET')
+        dorsal_lg_offset = cmds.ls ('dorsalLG_*_HCRV_*_CON_OFFSET')
+        l_pelvic_offset = cmds.ls ('L_pelvic_*_HCRV_*_CON_OFFSET')
+        r_pelvic_offset = cmds.ls ('R_pelvic_*_HCRV_*_CON_OFFSET')
+        l_pelvic_lg_offset = cmds.ls ('L_pelvicLG_*_HCRV_*_CON_OFFSET')
+        r_pelvic_lg_offset = cmds.ls ('R_pelvicLG_*_HCRV_*_CON_OFFSET')
+        anal_offset = cmds.ls ('anal_*_HCRV_*_CON_OFFSET')
+        anal_lg_offset = cmds.ls ('analLG_*_HCRV_*_CON_OFFSET')
+        offsets = cmds.group(dorsal_offset, dorsal_lg_offset, l_pelvic_offset,r_pelvic_offset,l_pelvic_lg_offset,r_pelvic_lg_offset,anal_offset,anal_lg_offset, n='offset_grp')
+        offset_groups=cmds.listRelatives(offsets, c=1)
         x = 0
         y = 0
         if per_cv == 1:
@@ -875,6 +831,42 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
                     cmds.matchTransform (offset_groups[x], '{}_1_JNT'.format (total_name[y]), rot=True)
                     x += 1
                 y += 1
+
+        con_list01 = cmds.listRelatives ('dorsal_*_CON', s=1)
+        for each in con_list01:
+            cmds.setAttr (each + '.lineWidth', 2)
+            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
+            cmds.setAttr (each + '.overrideColor', 18)
+
+        con_list02 = cmds.listRelatives ('dorsalLG_*_CON', s=1)
+        for each in con_list02:
+            cmds.setAttr (each + '.lineWidth', 2)
+            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
+            cmds.setAttr (each + '.overrideColor', 18)
+
+        con_list03 = cmds.listRelatives ('*_pelvic_*_CON', s=1)
+        for each in con_list03:
+            cmds.setAttr (each + '.lineWidth', 2)
+            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
+            cmds.setAttr (each + '.overrideColor', 18)
+
+        con_list04 = cmds.listRelatives ('*_pelvicLG_*_CON', s=1)
+        for each in con_list04:
+            cmds.setAttr (each + '.lineWidth', 2)
+            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
+            cmds.setAttr (each + '.overrideColor', 18)
+
+        con_list05 = cmds.listRelatives ('anal_*_CON', s=1)
+        for each in con_list05:
+            cmds.setAttr (each + '.lineWidth', 2)
+            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
+            cmds.setAttr (each + '.overrideColor', 18)
+
+        con_list06 = cmds.listRelatives ('analLG_*_CON', s=1)
+        for each in con_list06:
+            cmds.setAttr (each + '.lineWidth', 2)
+            cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
+            cmds.setAttr (each + '.overrideColor', 18)
 
         # create cluster trees
         if per_cv == 1:
@@ -895,6 +887,16 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
                         cmds.parent ('*_HCRV_{}_CON_OFFSET'.format (x + 1), '*_HCRV_{}_CON'.format (x))
                         x += 1
                     x += 1
+
+        # Parent cluster back under controlers
+        dyn_hdl = cmds.ls("*_HCRV_*_CLTHandle")
+        dyn_con = cmds.ls("*_HCRV_*_CON")
+
+        z = 0
+        for i in dyn_con:
+            cmds.parent(dyn_hdl[z], i)
+            z += 1
+
 
     def create_dynamic_master_control(self, *args):
         name = cmds.optionMenuGrp (self.name_menu, q=1, v=1)
@@ -945,46 +947,46 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         anal_sdk = cmds.ls ('anal*_SDK')
 
         for each in dorsal_sdk:
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='dorsal_master_CON.rotateZ', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='dorsal_master_CON.rotateZ', v=30, dv=30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='dorsal_master_CON.rotateX', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='dorsal_master_CON.rotateX', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateZ')
             cmds.setInfinity (pri="linear", poi="linear")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='dorsal_master_CON.rotateX', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='dorsal_master_CON.rotateX', v=30, dv=-30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='dorsal_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='dorsal_master_CON.rotateZ', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateY')
             cmds.setInfinity (pri="linear", poi="linear")
         for each in L_pelvic_sdk:
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='L_pelvic_master_CON.rotateZ', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='L_pelvic_master_CON.rotateZ', v=30, dv=30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='L_pelvic_master_CON.rotateX', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='L_pelvic_master_CON.rotateX', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateZ')
             cmds.setInfinity (pri="linear", poi="linear")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='L_pelvic_master_CON.rotateX', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='L_pelvic_master_CON.rotateX', v=30, dv=-30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='L_pelvic_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='L_pelvic_master_CON.rotateZ', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateY')
             cmds.setInfinity (pri="linear", poi="linear")
         for each in R_pelvic_sdk:
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='R_pelvic_master_CON.rotateZ', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='R_pelvic_master_CON.rotateZ', v=30, dv=30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='R_pelvic_master_CON.rotateX', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='R_pelvic_master_CON.rotateX', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateZ')
             cmds.setInfinity (pri="linear", poi="linear")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='R_pelvic_master_CON.rotateX', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='R_pelvic_master_CON.rotateX', v=30, dv=-30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='R_pelvic_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='R_pelvic_master_CON.rotateZ', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateY')
             cmds.setInfinity (pri="linear", poi="linear")
         for each in anal_sdk:
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='anal_master_CON.rotateZ', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateZ', cd='anal_master_CON.rotateZ', v=30, dv=30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='anal_master_CON.rotateX', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='anal_master_CON.rotateX', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateZ')
             cmds.setInfinity (pri="linear", poi="linear")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='anal_master_CON.rotateX', itt="spline", ott="spline")
-            cmds.setDrivenKeyframe (each + '.rotateY', cd='anal_master_CON.rotateX', v=30, dv=-30, itt="spline",
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='anal_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='anal_master_CON.rotateZ', v=30, dv=30, itt="spline",
                                     ott="spline")
             cmds.selectKey (each + '.rotateY')
             cmds.setInfinity (pri="linear", poi="linear")
@@ -1502,8 +1504,15 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
     def create_ribbon_sine(self,*args):
         mel.eval('SineOptions;')
 
+    def sine_info(self, *args):
+        sine_handle_amount = cmds.intFieldGrp (self.sine_amount, q=1, v1=1)
+
+        # Store amount of sine handle for each fin. For naming and connecting attributes. Put twice for the pectorial fin because there is L and R
+        sine_number.append(sine_handle_amount)
+
     def connect_ribbon_attributes(self,*args):
         names = ['L_pect', 'R_pect', 'tail']
+        global sine_number
         # Make master control
         master_con = []
         for i in names:
@@ -1534,36 +1543,108 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
             cmds.setAttr ('{}_master_CON'.format (i) + '.amplitude', e=1, k=1)
             cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='wavelength', nn='Wavelength')
             cmds.setAttr ('{}_master_CON'.format (i) + '.wavelength', e=1, k=1)
-            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='topOffset', nn='Top Offset')
-            cmds.setAttr ('{}_master_CON'.format (i) + '.topOffset', e=1, k=1)
-            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='midOffset', nn='Mid Offset')
-            cmds.setAttr ('{}_master_CON'.format (i) + '.midOffset', e=1, k=1)
-            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='bottomOffset', nn='Bottom Offset')
-            cmds.setAttr ('{}_master_CON'.format (i) + '.bottomOffset', e=1, k=1)
+            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='Offset1', nn='Offset1')
+            cmds.setAttr ('{}_master_CON'.format (i) + '.Offset1', e=1, k=1)
+            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='Offset2', nn='Offset2')
+            cmds.setAttr ('{}_master_CON'.format (i) + '.Offset2', e=1, k=1)
+            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='Offset3', nn='Offset3')
+            cmds.setAttr ('{}_master_CON'.format (i) + '.Offset3', e=1, k=1)
+            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='Offset4', nn='Offset4')
+            cmds.setAttr ('{}_master_CON'.format (i) + '.Offset4', e=1, k=1)
+            cmds.addAttr ('{}_master_CON'.format (i), at='float', ln='Offset5', nn='Offset5')
+            cmds.setAttr ('{}_master_CON'.format (i) + '.Offset5', e=1, k=1)
 
         # Rename sine handles
         sine_hdl = cmds.ls ('sine*Handle')
         z = 0
         t = 1
+        x = 0
         for each in names:
-            for j in range (3):
+            for j in range (sine_number[x]):
                 cmds.rename (sine_hdl[z], '{}_{}_SINE'.format (each, t))
                 z += 1
                 t += 1
+            t = 1
+            x += 1
 
         # Connect attributes of master control to sine noneLinear
         sine = cmds.ls ('sine*', typ='nonLinear')
         x = 1
         y = 1
+        z = 0
         for each in master_con:
-            for i in range (3):
+            for i in range (sine_number[z]):
                 cmds.connectAttr (each + '.amplitude', 'sine{}.amplitude'.format (x), f=1)
                 cmds.connectAttr (each + '.wavelength', 'sine{}.wavelength'.format (x), f=1)
                 x += 1
-            cmds.connectAttr (each + '.topOffset', 'sine{}.offset'.format (y), f=1)
-            cmds.connectAttr (each + '.midOffset', 'sine{}.offset'.format (y + 1), f=1)
-            cmds.connectAttr (each + '.bottomOffset', 'sine{}.offset'.format (y + 2), f=1)
-            y += 3
+            z += 1
+
+        # Create SDK group for root joint of ribbon system to open and close
+        con_selection = cmds.ls("L_pect_*_CON", "R_pect_*_CON", "tail_*_CON")
+        con_selection.remove("L_pect_master_CON")
+        con_selection.remove("R_pect_master_CON")
+        con_selection.remove("tail_master_CON")
+        for i in con_selection:
+            sdk_grp = cmds.group(i, n=i.replace("_CON", "_SDK"))
+
+        # Put Pivot of sdk group same as the joint and the controler
+        sdk_selection = cmds.ls("L_pect_*_SDK", "R_pect_*_SDK", "tail_*_SDK")
+        x = 0
+        for i in sdk_selection:
+            cmds.matchTransform (i, con_selection[x], piv=True)
+            x += 1
+
+        # Set Driven Key with master con for bend in Y axis
+        l_pect_sdk = cmds.ls("L_pect_*_SDK")
+        for each in l_pect_sdk:
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='L_pect_master_CON.rotateY', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='L_pect_master_CON.rotateY', v=30, dv=30, itt="spline",
+                                    ott="spline")
+            cmds.selectKey (each + '.rotateY')
+            cmds.setInfinity (pri="linear", poi="linear")
+
+        r_pect_sdk = cmds.ls("R_pect_*_SDK")
+        for each in r_pect_sdk:
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='R_pect_master_CON.rotateY', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='R_pect_master_CON.rotateY', v=30, dv=30, itt="spline",
+                                    ott="spline")
+            cmds.selectKey (each + '.rotateY')
+            cmds.setInfinity (pri="linear", poi="linear")
+
+        tail_sdk = cmds.ls("tail_*_SDK")
+        for each in tail_sdk:
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='tail_master_CON.rotateY', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateY', cd='tail_master_CON.rotateY', v=30, dv=30, itt="spline",
+                                    ott="spline")
+            cmds.selectKey (each + '.rotateY')
+            cmds.setInfinity (pri="linear", poi="linear")
+
+    def l_pect_oc(self, *args):
+        root_sdk_select = cmds.ls(sl=1)
+        for each in root_sdk_select:
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='L_pect_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='L_pect_master_CON.rotateZ', v=30, dv=30, itt="spline",
+                                    ott="spline")
+            cmds.selectKey (each + '.rotateZ')
+            cmds.setInfinity (pri="linear", poi="linear")
+
+    def r_pect_oc(self, *args):
+        root_sdk_select = cmds.ls(sl=1)
+        for each in root_sdk_select:
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='R_pect_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='R_pect_master_CON.rotateZ', v=30, dv=30, itt="spline",
+                                    ott="spline")
+            cmds.selectKey (each + '.rotateZ')
+            cmds.setInfinity (pri="linear", poi="linear")
+
+    def tail_oc(self, *args):
+        root_sdk_select = cmds.ls(sl=1)
+        for each in root_sdk_select:
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='tail_master_CON.rotateZ', itt="spline", ott="spline")
+            cmds.setDrivenKeyframe (each + '.rotateZ', cd='tail_master_CON.rotateZ', v=30, dv=30, itt="spline",
+                                    ott="spline")
+            cmds.selectKey (each + '.rotateZ')
+            cmds.setInfinity (pri="linear", poi="linear")
 
     def rb_clean(self,*args):
         # Ribbon controls in one group
