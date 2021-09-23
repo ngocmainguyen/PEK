@@ -619,7 +619,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
             count = (i + 1) * per_spikes_amount
             cmds.ikHandle (n='{}_{}_HDL'.format (name, count),
                            sj='{}_{}_JNT'.format (name, count - (per_spikes_amount - 1)),
-                           ee='{}_{}_JNT'.format (name, count), sol='ikSplineSolver')
+                           ee='{}_{}_JNT'.format (name, count), sol='ikSplineSolver', ns= 4)
             cmds.select (cl=1)
             cmds.rename ('curve1', '{}_{}_DCRV'.format (name, count - (per_spikes_amount - 1)))
             cmds.rename ('effector1', '{}_{}_EFF'.format (name, count - (per_spikes_amount - 1)))
