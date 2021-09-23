@@ -22,7 +22,6 @@ tail = 0
 rb_selection = []
 bind_jnt = []
 con_jnt = []
-rb_chain = []
 
 class NM_Window:
 
