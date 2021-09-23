@@ -702,7 +702,8 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
     def create_dynamic(self, *args):
         # create dynamic
         cmds.select (cl=1)
-        cmds.select (dynamic_ik_curves)
+        dyn_ik_crv = cmds.ls("dorsal_*_DCRV", "dorsalLG_*_DCRV", "L_pelvic_*_DCRV", "R_pelvic_*_DCRV", "L_pelvicLG_*_DCRV", "R_pelvicLG_*_DCRV", "anal_*_DCRV", "analLG_*_DCRV")
+        cmds.select(dyn_ik_crv)
         mel.eval ('DynCreateHairMenu MayaWindow|mainHairMenu;')
         mel.eval ('HairAssignHairSystemMenu MayaWindow|mainHairMenu|hairAssignHairSystemItem;')
         mel.eval ('assignNewHairSystem;')
@@ -710,10 +711,11 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
 
         # rename dynamic curve
         dynamic_crv = cmds.listRelatives ('hairSystem1OutputCurves')
+        name_order = ["dorsal", "dorsalLG", "L_pelvic", "R_pelvic", "L_pelvicLG", "R_pelvicLG", "anal", "analLG"]
         x = 0
         y = 1
         z = 1
-        for each in total_name:
+        for each in name_order:
             for i in range(total_spikes[x]):
                 cmds.rename ('curve{}'.format(y), '{}_{}_HCRV'.format(each, z))
                 y += 1
@@ -723,8 +725,9 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
 
         # connect to have initial position
         dynamics = cmds.listRelatives ('hairSystem1OutputCurves', c=1)
+        dyn_hdl = cmds.ls("dorsal_*_HDL", "dorsalLG_*_HDL", "L_pelvic_*_HDL", "R_pelvic_*_HDL", "L_pelvicLG_*_HDL", "R_pelvicLG_*_HDL", "anal_*_HDL", "analLG_*_HDL")
         i = 0
-        for each in dynamic_handles:
+        for each in dyn_hdl:
             cmds.connectAttr (dynamics[i] + '.worldSpace[0]', each + '.inCurve', f=1)
             i += 1
 
@@ -751,7 +754,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         # Clean outliner
         cmds.group (all_locs, n='dynamic_locs')
         cmds.group (all_jnts, n='dynamic_jnts')
-        cmds.group (dynamic_handles, n='dynamic_hdl')
+        cmds.group (dyn_hdl, n='dynamic_hdl')
 
 
     def create_auto_cluster(self, *arg):
