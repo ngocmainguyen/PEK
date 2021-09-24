@@ -94,8 +94,6 @@ Once create a fin, DON'T restart''', al="center", w=200, ww=1)
                                                    cw3=[70, 70, 50], el="units", value1=.5)
         self.spikes_height = cmds.floatFieldGrp (label='Height', cl3=["left", "left", "right"],
                                                  cw3=[70, 70, 50], el="units", value1=1)
-        self.spikes_span = cmds.intFieldGrp (label='Spike Curves', cl3=["left", "left", "right"],
-                                             cw3=[70, 70, 50], el="spans", value1=10)
         cmds.rowColumnLayout(nc=3)
         self.spikes_loc_button = cmds.button (l="LOCs", w=48, c=self.create_dynamic_fin_loc)
         self.spikes_parent = cmds.button (l="Parent LOCs", w=80, c=self.parent_dynamic_fin_loc)
@@ -105,10 +103,10 @@ Once create a fin, DON'T restart''', al="center", w=200, ww=1)
         self.to_do = cmds.text (l= "Create all fin before moving on!", al="center", w=200, ww=1)
         self.separate = cmds.separator (w=200, h=5)
         self.dynamic_button =  cmds.button (l="Create Dynamic", w=200, c=self.create_dynamic)
-        self.spikes_cluster_per_CV = cmds.intFieldGrp (label='Cluster/ CV', cl3=["left", "left", "right"],
-                                               cw3=[70, 70, 50], el="cluster", value1=1)
         cmds.setParent (child2)
         self.fin_auto_cluster = cmds.button (l="Auto Cluster", w=200, c=self.create_auto_cluster)
+        self.to_do = cmds.text (l= "Orient offset to jnt", al="center", w=200, ww=1)
+        self.contree = cmds.button (l="Con Tree", w=200, c=self.con_tree)
         self.dynamic_master_con = cmds.button (l="Fin Master control", w=200, c=self.create_dynamic_master_control)
         self.separate = cmds.separator (w=200, h=5)
         self.to_do = cmds.text (l='''For open/ close fin:
@@ -167,7 +165,10 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         cmds.setParent (child3)
         self.connect_attributes_rb = cmds.button (l='Create master con and connect attr', w=200,
                                                   c=self.connect_ribbon_attributes)
-        self.to_do = cmds.text (l= '''Select SDK grp of RB con''', al="center", w=200, ww=1)    
+        self.to_do = cmds.text (l= '''Select SDK grp of RB con''', al="center", w=200, ww=1) 
+        self.separate = cmds.separator (w=200, h=5)
+        self.to_do = cmds.text (l='''Select root con/ walk up to choose SDK group
+click below accordingly for OC of ribbon''', al="center", w=200, ww=1)   
         cmds.rowColumnLayout (nc=3)
         self.l_pect_sdk_oc_button = cmds.button (l="l_pect", w=66, c=self.l_pect_oc)
         self.r_pect_sdk_oc_button = cmds.button (l="r_pect", w=66, c=self.r_pect_oc)
@@ -508,7 +509,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         per_spikes_amount = cmds.intFieldGrp (self.spikes_joints, q=1, value1=1)
         distance = cmds.floatFieldGrp (self.spikes_distance, q=1, value1=1)
         height = cmds.floatFieldGrp (self.spikes_height, q=1, value1=1)
-        spans = cmds.intFieldGrp (self.spikes_span, q=1, value1=1)
+        spans = 20
         global dorsal
 
         # Create locator
@@ -585,7 +586,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         per_spikes_amount = cmds.intFieldGrp (self.spikes_joints, q=1, value1=1)
         distance = cmds.floatFieldGrp (self.spikes_distance, q=1, value1=1)
         height = cmds.floatFieldGrp (self.spikes_height, q=1, value1=1)
-        spans = cmds.intFieldGrp (self.spikes_span, q=1, value1=1)
+        spans = 20
 
         # Dynamic Fin Joints
         locs = cmds.ls ('{}_*_LOC'.format(name))
@@ -761,79 +762,43 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         name = cmds.optionMenuGrp (self.name_menu, q=1, v=1)
         amount = cmds.intFieldGrp (self.spikes_amount, q=1, value1=1)
         per_spikes_amount = cmds.intFieldGrp (self.spikes_joints, q=1, value1=1)
-        spans = cmds.intFieldGrp (self.spikes_span, q=1, value1=1)
-        per_cv = cmds.intFieldGrp( self.spikes_cluster_per_CV, q=1, value1=1)
+        spans = 20
 
         # create clusters
-        total_cv = spans + 3
+        total_cv = 23
         x = 0
         y = 1
-        z = math.ceil(total_cv / per_cv)
         dynamic_curves = cmds.listRelatives ('hairSystem1OutputCurves', c=1)
-        all_clusters = []
-        if per_cv == 1:
-            for each in dynamic_curves:
-                for j in range (total_cv):
-                    cmds.selectType(cv=True)
-                    cmds.select (each + '.cv[{}]'.format(x))
-                    clusters = cmds.cluster(n=each + '_{}_CLT'.format(y))[1]
-                    all_clusters.append(clusters)
-                    y += 1
-                    x += 1
-                x = 0
-        else:
-            for each in dynamic_curves:
-                for j in range(int(z)+1):
-                    cmds.selectType (cv=True)
-                    cmds.select (each + '.cv[{}:{}]'.format (x, x + (per_cv-1)))
-                    clusters = cmds.cluster(n=each + '_{}_CLT'.format(y))[1]
-                    all_clusters.append (clusters)
-                    x += per_cv
-                    y += 1
-                x = 0
+        # the first cluster first
+        for each in dynamic_curves: 
+            cmds.selectType(cv=True)
+            cmds.select (each + '.cv[0:1]')
+            clusters = cmds.cluster(n=each + '_{}_CLT'.format(y))[1]
+
+        #one cluster per 3 CVs. This is for 20 spans
+        enter_range = 7
+        x = 2
+        y = 2
+        for each in dynamic_curves: 
+            for j in range(enter_range):
+                cmds.selectType(cv=True)
+                cmds.select (each + '.cv[{}:{}]'.format(x, x+2))
+                clusters = cmds.cluster(n=each + '_{}_CLT'.format(y))[1]
+                y += 1
+                x += 3
+            x = 2
+            y = 2
 
         # control and offset group
-        for i in all_clusters:
+        dyn_clt = cmds.ls("*_HCRV_*_CLTHandle")
+        for i in dyn_clt:
             control_name = i.replace ("_CLTHandle", "_CON")
             ctrl = cmds.circle (nr=(1, 0, 0), r=1, n=control_name)[0]
             sdk = cmds.group (ctrl, n=ctrl + '_SDK')
             open_close = cmds.group(ctrl, n=ctrl + '_OC')
             offset = cmds.group (sdk, n=ctrl + '_OFFSET')
             cmds.parentConstraint (i, offset, mo=0)
-            cmds.delete (cmds.parentConstraint (i, offset))            
-            dynamic_offset_groups.append(offset)
-            dynamic_sdk_groups.append(sdk)
-            dynamic_oc_groups.append(open_close)
-
-        # Reorient offset group for set driven keys
-        dorsal_offset = cmds.ls ('dorsal_*_HCRV_*_CON_OFFSET')
-        dorsal_lg_offset = cmds.ls ('dorsalLG_*_HCRV_*_CON_OFFSET')
-        l_pelvic_offset = cmds.ls ('L_pelvic_*_HCRV_*_CON_OFFSET')
-        r_pelvic_offset = cmds.ls ('R_pelvic_*_HCRV_*_CON_OFFSET')
-        l_pelvic_lg_offset = cmds.ls ('L_pelvicLG_*_HCRV_*_CON_OFFSET')
-        r_pelvic_lg_offset = cmds.ls ('R_pelvicLG_*_HCRV_*_CON_OFFSET')
-        anal_offset = cmds.ls ('anal_*_HCRV_*_CON_OFFSET')
-        anal_lg_offset = cmds.ls ('analLG_*_HCRV_*_CON_OFFSET')
-        offsets = cmds.group(dorsal_offset, dorsal_lg_offset, l_pelvic_offset,r_pelvic_offset,l_pelvic_lg_offset,r_pelvic_lg_offset,anal_offset,anal_lg_offset, n='offset_grp')
-        offset_groups=cmds.listRelatives(offsets, c=1)
-        x = 0
-        y = 0
-        if per_cv == 1:
-            for each in total_spikes:
-                set_amount = int (each)
-                total_amount = set_amount * total_cv
-                for i in range (total_amount):
-                    cmds.matchTransform (offset_groups[x], '{}_1_JNT'.format (total_name[y]), rot=True)
-                    x += 1
-                y += 1
-        else:
-            for each in total_spikes:
-                set_amount = int (each)
-                total_amount = set_amount * (int(z)+1)
-                for i in range (total_amount):
-                    cmds.matchTransform (offset_groups[x], '{}_1_JNT'.format (total_name[y]), rot=True)
-                    x += 1
-                y += 1
+            cmds.delete (cmds.parentConstraint (i, offset))
 
         con_list01 = cmds.listRelatives ('dorsal_*_CON', s=1)
         for each in con_list01:
@@ -871,25 +836,101 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
             cmds.setAttr (each + '.overrideEnabled', 1, e=1, q=1)
             cmds.setAttr (each + '.overrideColor', 18)
 
-        # create cluster trees
-        if per_cv == 1:
+        # control and offset group
+        for i in all_clusters:
+            control_name = i.replace ("_CLTHandle", "_CON")
+            ctrl = cmds.circle (nr=(1, 0, 0), r=1, n=control_name)[0]
+            sdk = cmds.group (ctrl, n=ctrl + '_SDK')
+            open_close = cmds.group(ctrl, n=ctrl + '_OC')
+            offset = cmds.group (sdk, n=ctrl + '_OFFSET')
+            cmds.parentConstraint (i, offset, mo=0)
+            cmds.delete (cmds.parentConstraint (i, offset))            
+            dynamic_offset_groups.append(offset)
+            dynamic_sdk_groups.append(sdk)
+            dynamic_oc_groups.append(open_close)
+    
+    def con_tree(self, *args):
+        # create con trees
+        con_per_crv = 7
+        dorsal_hdl = cmds.ls("dorsal_*_HDL")
+        x = 1
+        y = 1
+        for each in dorsal_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('dorsal_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'dorsal_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
             x = 1
-            for each in total_spikes:
-                set_amount = int (each)
-                for i in range(set_amount):
-                    for j in range(int(z-1)):
-                        cmds.parent('*_HCRV_{}_CON_OFFSET'.format(x+1), '*_HCRV_{}_CON'.format(x))
-                        x += 1
-                    x += 1
-        else:
+            y += 1
+            
+        dorsallg_hdl = cmds.ls("dorsalLG_*_HDL")
+        x = 1
+        y = 1
+        for each in dorsallg_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('dorsalLG_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'dorsalLG_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
             x = 1
-            for each in total_spikes:
-                set_amount = int (each)
-                for i in range (set_amount):
-                    for j in range (int (z)):
-                        cmds.parent ('*_HCRV_{}_CON_OFFSET'.format (x + 1), '*_HCRV_{}_CON'.format (x))
-                        x += 1
-                    x += 1
+            y += 1
+            
+        l_pelvic_hdl = cmds.ls("L_pelvic_*_HDL")
+        x = 1
+        y = 1
+        for each in l_pelvic_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('L_pelvic_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'L_pelvic_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
+            x = 1
+            y += 1
+            
+        r_pelvic_hdl = cmds.ls("R_pelvic_*_HDL")
+        x = 1
+        y = 1
+        for each in r_pelvic_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('R_pelvic_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'R_pelvic_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
+            x = 1
+            y += 1
+
+        l_pelviclg_hdl = cmds.ls("L_pelvicLG_*_HDL")
+        x = 1
+        y = 1
+        for each in l_pelviclg_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('L_pelvicLG_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'L_pelvicLG_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
+            x = 1
+            y += 1
+            
+        r_pelviclg_hdl = cmds.ls("R_pelvicLG_*_HDL")
+        x = 1
+        y = 1
+        for each in r_pelviclg_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('R_pelvicLG_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'R_pelvicLG_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
+            x = 1
+            y += 1
+
+        anal_hdl = cmds.ls("anal_*_HDL")
+        x = 1
+        y = 1
+        for each in anal_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('anal_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'anal_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
+            x = 1
+            y += 1
+            
+        anallg_hdl = cmds.ls("analLG_*_HDL")
+        x = 1
+        y = 1
+        for each in anallg_hdl:
+            for j in range (con_per_crv):
+                cmds.parent ('analLG_{}_HCRV_{}_CON_OFFSET'.format (y, x + 1), 'analLG_{}_HCRV_{}_CON'.format (y, x))
+                x += 1
+            x = 1
+            y += 1
 
         # Parent cluster back under controlers
         dyn_hdl = cmds.ls("*_HCRV_*_CLTHandle")
@@ -898,7 +939,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         z = 0
         for i in dyn_con:
             cmds.parent(dyn_hdl[z], i)
-            z += 1
+            z += 1 
 
 
     def create_dynamic_master_control(self, *args):
@@ -907,8 +948,7 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         per_spikes_amount = cmds.intFieldGrp (self.spikes_joints, q=1, value1=1)
         distance = cmds.floatFieldGrp (self.spikes_distance, q=1, value1=1)
         height = cmds.floatFieldGrp (self.spikes_height, q=1, value1=1)
-        spans = cmds.intFieldGrp (self.spikes_span, q=1, value1=1)
-        per_cv = cmds.intFieldGrp( self.spikes_cluster_per_CV, q=1, value1=1)
+        spans = 20
 
         # Naming of master control
         master_name = ["dorsal", "L_pelvic", "R_pelvic", "anal"]
@@ -937,12 +977,6 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
                 cmds.setAttr ('{}_master_CON'.format (i) + '.' + each, l=1, k=0, cb=0, ch=0)
             master_cons.append('{}_master_CON'.format(i))
         
-        # Position the master icon
-        cmds.matchTransform ('dorsal_master_OFFSET', 'dorsalLG_{}_LOC'.format (last_dorsalLG[0]), pos=True)
-        cmds.matchTransform ('L_pelvic_master_OFFSET', 'L_pelvicLG_{}_LOC'.format (last_L_pelvicLG[0]), pos=True)
-        cmds.matchTransform ('R_pelvic_master_OFFSET', 'R_pelvicLG_{}_JNT'.format (last_L_pelvicLG[0]), pos=True)
-        cmds.matchTransform ('anal_master_OFFSET', 'analLG_{}_LOC'.format (last_analLG[0]), pos=True)
-
         # Set Driven Keys for master control:
         dorsal_sdk = cmds.ls ('dorsal*_SDK')
         L_pelvic_sdk = cmds.ls('L_pelvic*_SDK')
@@ -1070,9 +1104,6 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
 
     def dynamic_clean(self,*args):
         # Organize the outliner
-        selection = cmds.ls ('dynamic_locs', 'dynamic_jnts', 'dynamic_hdl', '*_CLTHandle')
-        for each in selection:
-            cmds.setAttr (each + '.visibility', 0)
         con_offset_groups = cmds.ls ('*_HCRV_*_CON_OFFSET', assemblies=True)
         cmds.group (con_offset_groups, n='controls_GRP')
         master_con_offset_groups = cmds.ls ('*_master_OFFSET', assemblies=True)
@@ -1086,6 +1117,11 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         # bind joints set for skinning
         dynamic_joints = cmds.listRelatives ('dynamic_jnts', ad=True, typ='joint')
         bind_jnt.append(dynamic_joints)
+
+        # No double transform on the dynamic curves
+        dyn_crv = cmds.ls("*_DCRV")
+        for each in dyn_crv:
+            cmds.setAttr(each + ".inheritsTransform", 0)
 
     def create_ribbon_locs(self,*args):
         name = cmds.optionMenuGrp (self.ribbon_name_menu, q=1, v=1)
@@ -1670,5 +1706,8 @@ In order: L, R, tail''', w=200, c=self.create_ribbon_sine)
         rb = ['deform_ribbon_GRP', 'Ribbon_Curves_GRP', 'ribbon_con_GRP', 'ribbon_master_con_GRP', 'ribbon_sine_GRP']
         cmds.group (rb, n='ribbon_system')
 
+        selection = cmds.ls ('dynamic_locs', 'dynamic_jnts', 'dynamic_hdl', '*_CLTHandle')
+        for each in selection:
+            cmds.setAttr (each + '.visibility', 0)
 
 myWindow = NM_Window ()
